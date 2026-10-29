@@ -17,6 +17,7 @@ import {
   UserCheck,
   Lock,
   Search,
+  LogOut,
 } from 'lucide-react';
 import { triggerPrintDialog, downloadCardAsPng } from '../utils/exportCanvas';
 import { soundEffects } from '../utils/audioSynthesizer';
@@ -267,28 +268,37 @@ export const ClassroomWall: React.FC<ClassroomWallProps> = ({
           </div>
         </div>
       ) : (
-        <div className="no-print mb-6 p-3 bg-cyan-950/40 border border-cyan-800/80 rounded-lg flex flex-wrap items-center justify-between gap-3 text-xs font-mono text-cyan-100">
-          <div className="flex items-center gap-2.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-            <span>
-              Connected Classroom Wall: <strong className="text-white tracking-wider">ROOM-{currentRoomCode}</strong>
+        <div className="no-print mb-6 p-3 sm:px-4 sm:py-3 bg-slate-900/95 border border-cyan-500/30 rounded-xl shadow-xl flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-950/80 border border-emerald-500/40 text-[10px] text-emerald-300 font-bold uppercase tracking-wider shadow-sm">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span>LIVE WALL</span>
+            </div>
+
+            <span className="text-slate-300 text-xs font-medium">
+              Classroom:
             </span>
+
+            <span className="px-2.5 py-1 rounded-md bg-cyan-950/90 border border-cyan-500/50 text-cyan-200 font-extrabold tracking-wider text-xs shadow-inner">
+              {currentRoomCode.startsWith('ROOM-') ? currentRoomCode : `ROOM-${currentRoomCode}`}
+            </span>
+
             {isSyncing && (
-              <span className="text-[10px] text-cyan-300 animate-pulse flex items-center gap-1">
-                <RefreshCw className="w-3 h-3 animate-spin" />
-                Syncing...
+              <span className="text-[11px] text-cyan-300 animate-pulse flex items-center gap-1.5 bg-cyan-950/60 px-2.5 py-1 rounded-md border border-cyan-800/60 shadow-sm">
+                <RefreshCw className="w-3 h-3 animate-spin text-cyan-400" />
+                <span>Syncing...</span>
               </span>
             )}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={handleCopyInviteLink}
-              className="px-2.5 py-1 rounded bg-cyan-800/80 hover:bg-cyan-700 text-white text-[11px] font-mono flex items-center gap-1.5 transition-colors cursor-pointer"
+              className="min-h-[34px] px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 active:scale-95 text-white text-xs font-mono font-semibold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
               title="Copy shareable invite link for classmates"
             >
-              {copiedLink ? <Check className="w-3 h-3 text-emerald-300" /> : <Copy className="w-3 h-3" />}
+              {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-200" /> : <Copy className="w-3.5 h-3.5 text-cyan-100" />}
               <span>{copiedLink ? 'Link Copied!' : 'Copy Class Link'}</span>
             </button>
 
@@ -296,7 +306,7 @@ export const ClassroomWall: React.FC<ClassroomWallProps> = ({
               type="button"
               onClick={onRefreshWall}
               disabled={isSyncing}
-              className="p-1.5 rounded hover:bg-cyan-800/60 text-cyan-300 hover:text-white transition-colors cursor-pointer"
+              className="min-h-[34px] p-2 rounded-lg bg-slate-800 hover:bg-slate-700 active:scale-95 text-cyan-300 hover:text-white border border-slate-700 transition-all cursor-pointer disabled:opacity-40"
               title="Refresh classroom periodic wall"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
@@ -305,9 +315,11 @@ export const ClassroomWall: React.FC<ClassroomWallProps> = ({
             <button
               type="button"
               onClick={onLeaveRoom}
-              className="px-2 py-1 rounded text-[11px] text-slate-400 hover:text-rose-300 hover:bg-rose-950/40 transition-colors cursor-pointer"
+              className="min-h-[34px] px-3 py-1.5 rounded-lg bg-rose-950/50 hover:bg-rose-900 active:scale-95 text-rose-300 hover:text-rose-100 border border-rose-800/70 text-xs font-mono font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
+              title="Leave this classroom wall and return to local roster"
             >
-              Leave Room
+              <LogOut className="w-3.5 h-3.5 text-rose-400" />
+              <span>Leave Room</span>
             </button>
           </div>
         </div>

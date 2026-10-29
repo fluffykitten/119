@@ -227,7 +227,9 @@ export function generateStudentElement(
     detectorConfidence: 99.8
   };
 
-  const flavorNote = getCurriculumFlavorText(positiveSeed, nameTrimmed);
+  // Mix seed with atomic number and mass so different elements and isotope rerolls yield fresh observations
+  const flavorSeed = Math.abs((positiveSeed ^ (atomicNumber * 2654435761)) + (atomicMass * 31));
+  const flavorNote = getCurriculumFlavorText(flavorSeed, nameTrimmed);
   const chemicalBehavior = getChemicalBehavior(block, positiveSeed);
   const rarity = rollCardRarity(positiveSeed, atomicNumber);
 
