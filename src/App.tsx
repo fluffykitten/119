@@ -109,7 +109,21 @@ export function App() {
     } catch {}
 
     setIsSyncing(true);
-    const onlineRoster = await fetchRoomRoster(clean);
+    let onlineRoster = await fetchRoomRoster(clean);
+
+    // If this device already has synthesized cards locally, push them to the joined room
+    if (roster.length > 0) {
+      const myLocalCards = roster.filter(
+        (card) => myCardIds.includes(card.id) || !onlineRoster || !onlineRoster.some((o) => o.id === card.id)
+      );
+      if (myLocalCards.length > 0) {
+        for (const card of myLocalCards) {
+          await saveElementToRoom(clean, card);
+        }
+        onlineRoster = await fetchRoomRoster(clean);
+      }
+    }
+
     setIsSyncing(false);
     if (onlineRoster) {
       updateRoster(onlineRoster);
@@ -132,9 +146,27 @@ export function App() {
     if (!currentRoomCode) return;
     setIsSyncing(true);
     const online = await fetchRoomRoster(currentRoomCode);
-    setIsSyncing(false);
+
     if (online) {
+      // If we have local cards not yet on the server, push them
+      const missingOnServer = roster.filter(
+        (card) => myCardIds.includes(card.id) && !online.some((o) => o.id === card.id)
+      );
+      if (missingOnServer.length > 0) {
+        for (const card of missingOnServer) {
+          await saveElementToRoom(currentRoomCode, card);
+        }
+        const updated = await fetchRoomRoster(currentRoomCode);
+        setIsSyncing(false);
+        if (updated) {
+          updateRoster(updated);
+          return;
+        }
+      }
+      setIsSyncing(false);
       updateRoster(online);
+    } else {
+      setIsSyncing(false);
     }
   };
 
@@ -369,7 +401,7 @@ export function App() {
   };
 
   // Save current student to classroom periodic shelf
-  const handleSaveToWall = () => {
+  const handleSaveToWall = async () => {
     if (!activeElement) return;
     addMyCardId(activeElement.id);
 
@@ -379,9 +411,11 @@ export function App() {
       : [activeElement, ...roster];
     updateRoster(nextRoster);
 
-    // If connected to online room, sync to Cloudflare KV
+    // If connected to online room, sync to Cloudflare KV before transitioning
     if (currentRoomCode) {
-      saveElementToRoom(currentRoomCode, activeElement);
+      setIsSyncing(true);
+      await saveElementToRoom(currentRoomCode, activeElement);
+      setIsSyncing(false);
     }
 
     setCurrentStep(4);

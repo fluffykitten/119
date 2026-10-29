@@ -1,6 +1,125 @@
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 import type { Plugin } from 'vite';
+import fs from 'node:fs';
+import path from 'node:path';
+
+// Development server middleware simulating the Cloudflare Pages Function (/api/wall) during 'npm run dev'
+function localCloudflareWallMock(): Plugin {
+  const devStorageFile = path.resolve(process.cwd(), '.dev-wall-storage.json');
+
+  const loadStorage = (): Record<string, any[]> => {
+    try {
+      if (fs.existsSync(devStorageFile)) {
+        return JSON.parse(fs.readFileSync(devStorageFile, 'utf-8'));
+      }
+    } catch {}
+    return {};
+  };
+
+  const saveStorage = (data: Record<string, any[]>) => {
+    try {
+      fs.writeFileSync(devStorageFile, JSON.stringify(data, null, 2), 'utf-8');
+    } catch {}
+  };
+
+  return {
+    name: 'local-cloudflare-wall-mock',
+    configureServer(server) {
+      server.middlewares.use('/api/wall', async (req, res) => {
+        res.setHeader('Content-Type', 'application/json');
+
+        const parsedUrl = new URL(req.url || '', `http://${req.headers.host || 'localhost'}`);
+        const room = (parsedUrl.searchParams.get('room') || 'DEFAULT').toUpperCase().trim();
+
+        if (req.method === 'GET') {
+          const store = loadStorage();
+          const roomRoster = store[room] || [];
+          res.statusCode = 200;
+          res.end(JSON.stringify(roomRoster));
+          return;
+        }
+
+        if (req.method === 'POST') {
+          let bodyStr = '';
+          req.on('data', (chunk) => {
+            bodyStr += chunk;
+          });
+          req.on('end', () => {
+            try {
+              const body = JSON.parse(bodyStr || '{}');
+              const targetRoom = (body.room || 'DEFAULT').toUpperCase().trim();
+              const element = body.element;
+
+              if (!element || !element.id) {
+                res.statusCode = 400;
+                res.end(JSON.stringify({ error: 'Missing element payload' }));
+                return;
+              }
+
+              const store = loadStorage();
+              let roster = store[targetRoom] || [];
+              const idx = roster.findIndex((e: any) => e.id === element.id);
+              if (idx >= 0) {
+                roster[idx] = element;
+              } else {
+                roster.unshift(element);
+              }
+              if (roster.length > 200) {
+                roster = roster.slice(0, 200);
+              }
+              store[targetRoom] = roster;
+              saveStorage(store);
+
+              res.statusCode = 200;
+              res.end(JSON.stringify({ success: true, count: roster.length }));
+            } catch (err: unknown) {
+              res.statusCode = 500;
+              res.end(JSON.stringify({ error: err instanceof Error ? err.message : 'Internal Server Error' }));
+            }
+          });
+          return;
+        }
+
+        if (req.method === 'DELETE') {
+          let bodyStr = '';
+          req.on('data', (chunk) => {
+            bodyStr += chunk;
+          });
+          req.on('end', () => {
+            try {
+              const body = JSON.parse(bodyStr || '{}');
+              const targetRoom = (body.room || 'DEFAULT').toUpperCase().trim();
+              const elementId = body.elementId;
+
+              if (!elementId) {
+                res.statusCode = 400;
+                res.end(JSON.stringify({ error: 'Missing elementId' }));
+                return;
+              }
+
+              const store = loadStorage();
+              let roster = store[targetRoom] || [];
+              roster = roster.filter((e: any) => e.id !== elementId);
+              store[targetRoom] = roster;
+              saveStorage(store);
+
+              res.statusCode = 200;
+              res.end(JSON.stringify({ success: true, count: roster.length }));
+            } catch (err: unknown) {
+              res.statusCode = 500;
+              res.end(JSON.stringify({ error: err instanceof Error ? err.message : 'Internal Server Error' }));
+            }
+          });
+          return;
+        }
+
+        res.statusCode = 405;
+        res.end(JSON.stringify({ error: 'Method Not Allowed' }));
+      });
+    },
+  };
+}
 
 // Development server middleware simulating the Cloudflare Pages Function during 'npm run dev'
 function localCloudflareVisionMock(apiKey?: string): Plugin {
@@ -128,6 +247,6 @@ export default defineConfig(({ mode }) => {
   const apiKey = env.GEMINI_API_KEY || env.VITE_GEMINI_API_KEY;
 
   return {
-    plugins: [react(), localCloudflareVisionMock(apiKey)],
+    plugins: [react(), localCloudflareWallMock(), localCloudflareVisionMock(apiKey)],
   };
 });

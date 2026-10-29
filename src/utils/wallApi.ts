@@ -16,6 +16,11 @@ export async function fetchRoomRoster(roomCode: string): Promise<StudentElement[
     });
 
     if (res.ok) {
+      const contentType = res.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) {
+        console.warn('API returned non-JSON response for /api/wall:', contentType);
+        return null;
+      }
       const data = await res.json();
       if (Array.isArray(data)) {
         return data as StudentElement[];
