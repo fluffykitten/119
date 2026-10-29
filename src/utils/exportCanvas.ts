@@ -11,15 +11,18 @@ export async function downloadCardAsPng(
   formFactor: 'card' | 'dossier'
 ): Promise<void> {
   try {
-    const width = node.offsetWidth;
-    const height = node.offsetHeight;
+    // Canonical render dimensions to prevent squishing when downloading on mobile viewports or constrained modals
+    const canonicalWidth = formFactor === 'card' ? 360 : 740;
+    const currentWidth = node.offsetWidth || canonicalWidth;
+    const exportWidth = Math.max(canonicalWidth, currentWidth);
 
     const dataUrl = await toPng(node, {
       pixelRatio: 2.5, // Crisp 300 DPI print quality without memory bloat
       backgroundColor: '#f8fafc',
-      width: width,
-      height: height,
+      width: exportWidth,
       style: {
+        width: `${exportWidth}px`,
+        maxWidth: `${exportWidth}px`,
         margin: '0',
         marginLeft: '0',
         marginRight: '0',

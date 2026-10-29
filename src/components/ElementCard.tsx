@@ -414,26 +414,26 @@ export const ElementCard: React.FC<ElementCardProps> = ({
 
       {/* Official Laboratory Dossier Header */}
       <div className={`flex flex-col sm:flex-row justify-between items-start gap-4 pb-4 mb-6 border-b-2 ${isLegendary ? 'border-cyan-400' : isRare ? 'border-amber-600' : 'border-slate-900'}`}>
-        <div>
-          <div className="flex items-center gap-2">
+        <div className="flex-1 min-w-0 pr-2">
+          <div className="flex flex-wrap items-center gap-2 mb-1">
             <span className={`text-[11px] font-mono uppercase tracking-widest font-bold ${isLegendary ? 'text-cyan-300' : isRare ? 'text-amber-800' : 'text-slate-600'}`}>
               International Union of Pure and Applied Chemistry (IUPAC)
             </span>
             {isLegendary && (
-              <span className="px-1.5 py-0.2 rounded bg-gradient-to-r from-pink-500 to-cyan-400 text-slate-950 text-[9px] font-mono font-extrabold uppercase">
+              <span className="px-1.5 py-0.5 rounded bg-gradient-to-r from-pink-500 to-cyan-400 text-slate-950 text-[9px] font-mono font-extrabold uppercase shrink-0">
                 ✦ Legendary Foil
               </span>
             )}
             {isRare && (
-              <span className="px-1.5 py-0.2 rounded bg-amber-500 text-slate-950 text-[9px] font-mono font-extrabold uppercase">
+              <span className="px-1.5 py-0.5 rounded bg-amber-500 text-slate-950 text-[9px] font-mono font-extrabold uppercase shrink-0">
                 ★ Rare Gilded
               </span>
             )}
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight mt-1 mb-0.5">
+          <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight mt-1 mb-1 leading-snug">
             SYNTHESIS CERTIFICATION DOSSIER
           </h1>
-          <p className={`text-xs font-mono ${isLegendary ? 'text-slate-400' : isRare ? 'text-amber-800' : 'text-slate-600'}`}>
+          <p className={`text-xs font-mono leading-relaxed ${isLegendary ? 'text-slate-400' : isRare ? 'text-amber-800' : 'text-slate-600'}`}>
             Division of Superheavy Elements &bull; Joint Institute for Relativistic Synthesis
           </p>
         </div>
@@ -446,10 +446,10 @@ export const ElementCard: React.FC<ElementCardProps> = ({
             ? 'border-amber-600 text-amber-900 bg-amber-100'
             : 'border-rose-800 text-rose-800'
         }`}>
-          <div className="text-[9px] uppercase tracking-wider font-bold">
+          <div className="text-[9px] uppercase tracking-wider font-bold whitespace-nowrap">
             {isLegendary ? '✦ LEGENDARY TCG FOIL ✦' : isRare ? '★ RARE GILDED SEAL ★' : 'IUPAC STANDARD'}
           </div>
-          <div className="text-xs font-extrabold tracking-tight">SYNTHESIS APPROVED</div>
+          <div className="text-xs font-extrabold tracking-tight whitespace-nowrap">SYNTHESIS APPROVED</div>
           <div className="text-[8px] tracking-widest mt-0.5">{element.createdAt}</div>
         </div>
       </div>
