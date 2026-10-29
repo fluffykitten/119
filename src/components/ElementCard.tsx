@@ -251,11 +251,17 @@ export const ElementCard: React.FC<ElementCardProps> = ({
             </div>
 
             {/* Center: Hero Chemical Symbol + Student Element Name */}
-            <div className="my-auto py-1 flex flex-col items-center">
+            <div className="my-auto py-1 flex flex-col items-center w-full px-1">
               <span className="text-4xl font-extrabold font-sans tracking-tighter block leading-none">
                 {element.symbol}
               </span>
-              <span className={`text-[11px] font-bold tracking-tight block mt-1.5 max-w-[115px] truncate ${
+              <span className={`font-bold tracking-tight block mt-1 leading-tight text-center w-full ${
+                element.elementName.length > 12
+                  ? 'text-[8.5px]'
+                  : element.elementName.length > 9
+                  ? 'text-[9.5px]'
+                  : 'text-[11px]'
+              } ${
                 isLegendary ? 'text-slate-100' : isRare ? 'text-amber-950' : 'text-slate-900'
               }`}>
                 {element.elementName}
