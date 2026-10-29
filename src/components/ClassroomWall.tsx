@@ -16,6 +16,7 @@ import {
   Check,
   UserCheck,
   Lock,
+  Search,
 } from 'lucide-react';
 import { triggerPrintDialog, downloadCardAsPng } from '../utils/exportCanvas';
 import { soundEffects } from '../utils/audioSynthesizer';
@@ -60,6 +61,7 @@ export const ClassroomWall: React.FC<ClassroomWallProps> = ({
   const [modalDetailLevel, setModalDetailLevel] = useState<DetailLevel>('academic');
   const [isBatchPrintMode, setIsBatchPrintMode] = useState(false);
   const [rarityFilter, setRarityFilter] = useState<'all' | CardRarity>('all');
+  const [searchTerm, setSearchTerm] = useState('');
   const [roomInput, setRoomInput] = useState('');
   const [copiedLink, setCopiedLink] = useState(false);
 
@@ -69,10 +71,23 @@ export const ClassroomWall: React.FC<ClassroomWallProps> = ({
   // Sort students chronologically by Atomic Number Z ascending
   const sortedRoster = [...roster].sort((a, b) => a.atomicNumber - b.atomicNumber);
 
-  // Filtered roster for screen view
+  // Filtered roster for screen view (rarity + specimen code / name search)
   const displayedRoster = sortedRoster.filter((item) => {
-    if (rarityFilter === 'all') return true;
-    return (item.rarity || 'common') === rarityFilter;
+    if (rarityFilter !== 'all' && (item.rarity || 'common') !== rarityFilter) {
+      return false;
+    }
+    if (searchTerm.trim()) {
+      const q = searchTerm.trim().toUpperCase();
+      const code = `Z${item.atomicNumber}-${item.symbol}${currentRoomCode ? `-${currentRoomCode}` : ''}`.toUpperCase();
+      const match =
+        code.includes(q) ||
+        String(item.atomicNumber) === q ||
+        item.symbol.toUpperCase() === q ||
+        item.studentName.toUpperCase().includes(q) ||
+        item.elementName.toUpperCase().includes(q);
+      if (!match) return false;
+    }
+    return true;
   });
 
   // Counts by rarity
@@ -350,6 +365,27 @@ export const ClassroomWall: React.FC<ClassroomWallProps> = ({
             <Sparkles className="w-3 h-3" />
             <span>Legendary Holo ({countLegendary})</span>
           </button>
+        </div>
+
+        {/* Search Specimen Code / Name Input */}
+        <div className="relative shrink-0">
+          <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search code or name..."
+            className="pl-8 pr-6 py-1 bg-white border border-slate-300 rounded text-xs font-mono w-44 sm:w-48 focus:outline-none focus:border-cyan-500 uppercase placeholder:text-slate-400"
+          />
+          {searchTerm && (
+            <button
+              type="button"
+              onClick={() => setSearchTerm('')}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs font-bold"
+            >
+              &times;
+            </button>
+          )}
         </div>
 
         {/* JSON Backup & Clear */}

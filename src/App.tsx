@@ -9,6 +9,7 @@ import { ElementCard } from './components/ElementCard';
 import { ControlPanel } from './components/ControlPanel';
 import { ClassroomWall } from './components/ClassroomWall';
 import { SpecimenViewBar } from './components/SpecimenViewBar';
+import { SpecimenLookupModal } from './components/SpecimenLookupModal';
 import { TabbyCatBadge } from './components/TabbyCatBadge';
 import { PhotoFramingModal } from './components/PhotoFramingModal';
 import { analyzeImagePixels } from './engines/pixelAnalyzer';
@@ -53,6 +54,7 @@ export function App() {
     return false;
   });
   const [specimenNotFound, setSpecimenNotFound] = useState(false);
+  const [isLookupModalOpen, setIsLookupModalOpen] = useState(false);
   const [roster, setRoster] = useState<StudentElement[]>(() => {
     try {
       const saved = localStorage.getItem(ROSTER_STORAGE_KEY);
@@ -507,6 +509,22 @@ export function App() {
     setAudioMuted(isMuted);
   };
 
+  // Select specimen from lookup modal
+  const handleSelectFromLookup = (element: StudentElement, roomCode?: string) => {
+    setActiveElement(element);
+    setIsViewOnly(true);
+    setIsLookupModalOpen(false);
+    if (roomCode) {
+      setCurrentRoomCode(roomCode);
+    }
+    const url = new URL(window.location.href);
+    url.searchParams.set('element', element.id);
+    if (roomCode) {
+      url.searchParams.set('room', roomCode);
+    }
+    window.history.replaceState({}, '', url.toString());
+  };
+
   const isSavedToWall = activeElement
     ? roster.some((item) => item.id === activeElement.id)
     : false;
@@ -522,6 +540,7 @@ export function App() {
           hasActiveElement={activeElement !== null}
           audioMuted={audioMuted}
           onToggleAudio={handleToggleAudio}
+          onOpenLookup={() => setIsLookupModalOpen(true)}
         />
       )}
 
@@ -556,22 +575,31 @@ export function App() {
                 <p className="text-xs text-slate-600 mb-6 leading-relaxed">
                   The requested element ID could not be retrieved from the active classroom vault. The specimen may have been decommissioned or the verification link is incomplete.
                 </p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const url = new URL(window.location.href);
-                    url.searchParams.delete('element');
-                    url.searchParams.delete('format');
-                    window.history.replaceState({}, '', url.toString());
-                    setIsViewOnly(false);
-                    setSpecimenNotFound(false);
-                    setActiveElement(null);
-                    setCurrentStep(1);
-                  }}
-                  className="min-h-[44px] px-5 bg-cyan-700 hover:bg-cyan-800 text-white rounded font-mono text-xs font-bold transition-colors cursor-pointer"
-                >
-                  Enter Synthesis Chamber
-                </button>
+                <div className="flex flex-wrap items-center justify-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setIsLookupModalOpen(true)}
+                    className="min-h-[44px] px-5 bg-cyan-700 hover:bg-cyan-800 text-white rounded font-mono text-xs font-bold transition-colors cursor-pointer"
+                  >
+                    Search by Specimen Code
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const url = new URL(window.location.href);
+                      url.searchParams.delete('element');
+                      url.searchParams.delete('format');
+                      window.history.replaceState({}, '', url.toString());
+                      setIsViewOnly(false);
+                      setSpecimenNotFound(false);
+                      setActiveElement(null);
+                      setCurrentStep(1);
+                    }}
+                    className="min-h-[44px] px-4 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded font-mono text-xs font-semibold transition-colors cursor-pointer"
+                  >
+                    Enter Synthesis Chamber
+                  </button>
+                </div>
               </div>
             ) : (
               <>
@@ -702,6 +730,16 @@ export function App() {
           </>
         )}
       </main>
+
+      {/* Specimen ID Lookup Modal */}
+      {isLookupModalOpen && (
+        <SpecimenLookupModal
+          localRoster={roster}
+          currentRoomCode={currentRoomCode}
+          onSelectSpecimen={handleSelectFromLookup}
+          onClose={() => setIsLookupModalOpen(false)}
+        />
+      )}
 
       {/* Footer Attribution Strip */}
       <TabbyCatBadge variant="footer" className="no-print mt-auto" />

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Volume2, VolumeX, Grid, Atom, Camera, FileText } from 'lucide-react';
+import { Volume2, VolumeX, Grid, Atom, Camera, FileText, Search } from 'lucide-react';
 
 interface HeaderProps {
   currentStep: 1 | 2 | 3 | 4;
@@ -8,6 +8,7 @@ interface HeaderProps {
   hasActiveElement: boolean;
   audioMuted: boolean;
   onToggleAudio: () => void;
+  onOpenLookup?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -17,6 +18,7 @@ export const Header: React.FC<HeaderProps> = ({
   hasActiveElement,
   audioMuted,
   onToggleAudio,
+  onOpenLookup,
 }) => {
   return (
     <header className="no-print bg-slate-50 border-b border-slate-300 sticky top-0 z-40">
@@ -113,13 +115,25 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
         </nav>
 
-        {/* Right: Audio Toggle & Quick Status */}
+        {/* Right: Specimen Lookup & Audio Toggle */}
         <div className="flex items-center gap-2">
+          {onOpenLookup && (
+            <button
+              type="button"
+              onClick={onOpenLookup}
+              className="min-h-[40px] px-3 rounded-lg border border-slate-300 hover:border-cyan-500 bg-white hover:bg-slate-50 text-slate-800 text-xs font-mono font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs"
+              title="Verify Specimen by ID Code"
+            >
+              <Search className="w-3.5 h-3.5 text-cyan-600" />
+              <span className="hidden sm:inline">Verify Specimen</span>
+            </button>
+          )}
+
           <button
             type="button"
             onClick={onToggleAudio}
             aria-label={audioMuted ? 'Unmute particle sound effects' : 'Mute particle sound effects'}
-            className="min-h-[44px] min-w-[44px] p-2 rounded border border-slate-300 hover:bg-slate-200 text-slate-700 transition-colors flex items-center justify-center cursor-pointer"
+            className="min-h-[40px] min-w-[40px] p-2 rounded-lg border border-slate-300 hover:bg-slate-200 text-slate-700 transition-colors flex items-center justify-center cursor-pointer shadow-2xs"
             title={audioMuted ? 'Sound Muted' : 'Sound Active'}
           >
             {audioMuted ? <VolumeX className="w-4 h-4 text-slate-500" /> : <Volume2 className="w-4 h-4 text-cyan-700" />}
