@@ -622,6 +622,14 @@ export function App() {
                   onDownloadPng={handleDownloadPng}
                   atomicNumber={activeElement.atomicNumber}
                   symbol={activeElement.symbol}
+                  onExitViewOnly={() => {
+                    const url = new URL(window.location.href);
+                    url.searchParams.delete('element');
+                    url.searchParams.delete('format');
+                    window.history.replaceState({}, '', url.toString());
+                    setIsViewOnly(false);
+                    setCurrentStep(4);
+                  }}
                 />
               </>
             )}

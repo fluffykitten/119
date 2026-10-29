@@ -45,7 +45,7 @@ export const SpecimenLookupModal: React.FC<SpecimenLookupModalProps> = ({
       extractedRoom = currentRoomCode;
     }
 
-    if (extractedRoom && extractedRoom !== currentRoomCode) {
+    if (extractedRoom) {
       let isSubscribed = true;
       const timeoutId = setTimeout(() => {
         setIsSearchingRemote(true);
@@ -85,15 +85,19 @@ export const SpecimenLookupModal: React.FC<SpecimenLookupModalProps> = ({
   const matches = cleanQuery
     ? combinedRoster.filter((item) => {
         const zCode = `Z${item.atomicNumber}-${item.symbol}`.toUpperCase();
-        const fullCode = `${zCode}-${currentRoomCode || ''}`.toUpperCase();
         const numStr = String(item.atomicNumber);
         const nameStr = item.studentName.toUpperCase();
         const elemStr = item.elementName.toUpperCase();
         const symbolStr = item.symbol.toUpperCase();
 
+        const cleanParts = cleanQuery.replace(/[^A-Z0-9]/g, '');
+        const zCodeClean = zCode.replace(/[^A-Z0-9]/g, '');
+
         return (
-          fullCode.includes(cleanQuery) ||
+          cleanQuery.includes(zCode) ||
           zCode.includes(cleanQuery) ||
+          cleanParts.includes(zCodeClean) ||
+          zCodeClean.includes(cleanParts) ||
           numStr === cleanQuery ||
           nameStr.includes(cleanQuery) ||
           elemStr.includes(cleanQuery) ||

@@ -1,6 +1,6 @@
 import React from 'react';
 import type { FormFactor } from '../types/element';
-import { CreditCard, FileText, Download, ShieldCheck } from 'lucide-react';
+import { CreditCard, FileText, Download, ShieldCheck, X } from 'lucide-react';
 import { soundEffects } from '../utils/audioSynthesizer';
 
 interface SpecimenViewBarProps {
@@ -9,6 +9,7 @@ interface SpecimenViewBarProps {
   onDownloadPng: () => void;
   atomicNumber: number;
   symbol: string;
+  onExitViewOnly?: () => void;
 }
 
 export const SpecimenViewBar: React.FC<SpecimenViewBarProps> = ({
@@ -17,6 +18,7 @@ export const SpecimenViewBar: React.FC<SpecimenViewBarProps> = ({
   onDownloadPng,
   atomicNumber,
   symbol,
+  onExitViewOnly,
 }) => {
   return (
     <div className="no-print mt-6 flex flex-col sm:flex-row items-center justify-between gap-4 p-3 bg-slate-900/90 backdrop-blur-md border border-slate-800 text-white rounded-xl shadow-2xl max-w-xl mx-auto animate-fade-in">
@@ -78,6 +80,19 @@ export const SpecimenViewBar: React.FC<SpecimenViewBarProps> = ({
           <Download className="w-3.5 h-3.5 text-cyan-400" />
           <span>Save PNG</span>
         </button>
+
+        {/* Exit View Button */}
+        {onExitViewOnly && (
+          <button
+            type="button"
+            onClick={onExitViewOnly}
+            className="min-h-[34px] px-2.5 bg-slate-800 hover:bg-slate-700 active:scale-95 border border-slate-700 text-slate-300 hover:text-white rounded-lg text-xs font-mono font-medium flex items-center gap-1 transition-all cursor-pointer"
+            title="Exit specimen view"
+          >
+            <X className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Close</span>
+          </button>
+        )}
       </div>
     </div>
   );
