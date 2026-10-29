@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import confetti from 'canvas-confetti';
+import { AlertTriangle } from 'lucide-react';
 import type { StudentElement, ShaderMode, FormFactor, DetailLevel, CardRarity } from './types/element';
 import { Header } from './components/Header';
 import { IntakeChamber } from './components/IntakeChamber';
@@ -7,6 +8,7 @@ import { SynthesisLoader } from './components/SynthesisLoader';
 import { ElementCard } from './components/ElementCard';
 import { ControlPanel } from './components/ControlPanel';
 import { ClassroomWall } from './components/ClassroomWall';
+import { SpecimenViewBar } from './components/SpecimenViewBar';
 import { TabbyCatBadge } from './components/TabbyCatBadge';
 import { PhotoFramingModal } from './components/PhotoFramingModal';
 import { analyzeImagePixels } from './engines/pixelAnalyzer';
@@ -27,9 +29,30 @@ export function App() {
   const [candidateName, setCandidateName] = useState<string>('');
   const [candidatePhoto, setCandidatePhoto] = useState<string>('');
   const [pendingRarity, setPendingRarity] = useState<CardRarity>('common');
-  const [formFactor, setFormFactor] = useState<FormFactor>('card');
+  const [formFactor, setFormFactor] = useState<FormFactor>(() => {
+    if (typeof window !== 'undefined') {
+      const formatParam = new URLSearchParams(window.location.search).get('format');
+      if (formatParam === 'dossier' || formatParam === 'card') {
+        return formatParam;
+      }
+    }
+    return 'card';
+  });
   const [detailLevel, setDetailLevel] = useState<DetailLevel>('academic');
   const [isFramingModalOpen, setIsFramingModalOpen] = useState(false);
+  const [isViewOnly, setIsViewOnly] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return Boolean(new URLSearchParams(window.location.search).get('element'));
+    }
+    return false;
+  });
+  const [isLoadingSpecimen, setIsLoadingSpecimen] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return Boolean(new URLSearchParams(window.location.search).get('element'));
+    }
+    return false;
+  });
+  const [specimenNotFound, setSpecimenNotFound] = useState(false);
   const [roster, setRoster] = useState<StudentElement[]>(() => {
     try {
       const saved = localStorage.getItem(ROSTER_STORAGE_KEY);
@@ -204,23 +227,63 @@ export function App() {
     };
   }, [currentRoomCode, currentStep]);
 
-  // Deep-link check: ?element=ID auto-opens that card
+  // Deep-link check: ?element=ID auto-opens that card in View-Only Specimen Inspection mode
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      const elementParam = params.get('element');
-      if (elementParam && roster.length > 0) {
-        const found = roster.find((item) => item.id === elementParam);
-        if (found) {
-          const timeoutId = setTimeout(() => {
-            setActiveElement(found);
-            setCurrentStep(3);
-          }, 0);
-          return () => clearTimeout(timeoutId);
-        }
-      }
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const elementParam = params.get('element');
+    const roomParam = params.get('room');
+    if (!elementParam) return;
+
+    // 1. Check if card exists in local roster
+    const localFound = roster.find((item) => item.id === elementParam);
+    if (localFound) {
+      const timeoutId = setTimeout(() => {
+        setActiveElement(localFound);
+        setIsLoadingSpecimen(false);
+      }, 0);
+      return () => clearTimeout(timeoutId);
     }
-  }, [roster]);
+
+    // 2. If not found in local roster, check remote room
+    const targetRoom = roomParam || currentRoomCode;
+    if (targetRoom) {
+      let isSubscribed = true;
+      const timeoutId = setTimeout(() => {
+        setIsLoadingSpecimen(true);
+      }, 0);
+
+      fetchRoomRoster(targetRoom)
+        .then((online) => {
+          if (!isSubscribed) return;
+          setIsLoadingSpecimen(false);
+          if (online) {
+            const remoteFound = online.find((item) => item.id === elementParam);
+            if (remoteFound) {
+              setActiveElement(remoteFound);
+              return;
+            }
+          }
+          setSpecimenNotFound(true);
+        })
+        .catch(() => {
+          if (!isSubscribed) return;
+          setIsLoadingSpecimen(false);
+          setSpecimenNotFound(true);
+        });
+
+      return () => {
+        isSubscribed = false;
+        clearTimeout(timeoutId);
+      };
+    } else {
+      const timeoutId = setTimeout(() => {
+        setIsLoadingSpecimen(false);
+        setSpecimenNotFound(true);
+      }, 0);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [roster, currentRoomCode]);
 
   // Step 1 -> Step 2: Trigger particle accelerator collision sequence
   const handleBeginSynthesis = async (studentName: string, rawPhotoDataUrl: string, birthMonth?: number) => {
@@ -450,116 +513,193 @@ export function App() {
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-100 text-slate-900 font-sans">
-      {/* Top Application Bar */}
-      <Header
-        currentStep={currentStep}
-        onNavigateStep={(step) => setCurrentStep(step)}
-        savedCount={roster.length}
-        hasActiveElement={activeElement !== null}
-        audioMuted={audioMuted}
-        onToggleAudio={handleToggleAudio}
-      />
+      {/* Top Application Bar (Hidden in View-Only Specimen Mode) */}
+      {!isViewOnly && (
+        <Header
+          currentStep={currentStep}
+          onNavigateStep={(step) => setCurrentStep(step)}
+          savedCount={roster.length}
+          hasActiveElement={activeElement !== null}
+          audioMuted={audioMuted}
+          onToggleAudio={handleToggleAudio}
+        />
+      )}
 
       {/* Main Content Area */}
       <main className="flex-1">
-        {/* Step 1: Intake Chamber */}
-        {currentStep === 1 && (
-          <IntakeChamber onBeginSynthesis={handleBeginSynthesis} />
-        )}
-
-        {/* Step 2: Particle Accelerator Collision Sequence */}
-        {currentStep === 2 && (
-          <SynthesisLoader
-            studentName={candidateName}
-            photoDataUrl={candidatePhoto}
-            rarity={pendingRarity}
-            onComplete={handleColliderComplete}
-          />
-        )}
-
-        {/* Step 3: Dossier & Trading Card Studio */}
-        {currentStep === 3 && activeElement && (
-          <div className="max-w-6xl mx-auto px-4 py-8">
-            <div className="flex justify-center overflow-x-auto py-2">
-              <div ref={cardContainerRef} className="shrink-0 flex justify-center">
-                <ElementCard
-                  element={activeElement}
-                  formFactor={formFactor}
-                  detailLevel={detailLevel}
-                  roomCode={currentRoomCode}
-                />
+        {isViewOnly ? (
+          <div className="max-w-4xl mx-auto px-4 py-8">
+            {isLoadingSpecimen ? (
+              <div className="min-h-[60vh] flex flex-col items-center justify-center p-6 text-center">
+                <div className="relative w-16 h-16 mb-4">
+                  <div className="absolute inset-0 rounded-full border-2 border-cyan-500/20 animate-ping" />
+                  <div className="w-16 h-16 rounded-full border-2 border-cyan-500 border-t-transparent animate-spin" />
+                  <div className="absolute inset-0 flex items-center justify-center text-cyan-600 font-mono text-[11px] font-extrabold">
+                    IUPAC
+                  </div>
+                </div>
+                <h2 className="text-base font-mono font-bold text-slate-800 tracking-wider uppercase mb-1">
+                  Accessing Digital Vault
+                </h2>
+                <p className="text-xs font-mono text-slate-500">
+                  Retrieving specimen signature from classroom archive...
+                </p>
               </div>
-            </div>
+            ) : specimenNotFound || !activeElement ? (
+              <div className="min-h-[60vh] flex flex-col items-center justify-center p-6 text-center max-w-md mx-auto">
+                <div className="w-14 h-14 rounded-full bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center mb-4">
+                  <AlertTriangle className="w-7 h-7" />
+                </div>
+                <h2 className="text-xl font-mono font-extrabold text-slate-900 tracking-tight mb-2">
+                  Specimen Record Not Found
+                </h2>
+                <p className="text-xs text-slate-600 mb-6 leading-relaxed">
+                  The requested element ID could not be retrieved from the active classroom vault. The specimen may have been decommissioned or the verification link is incomplete.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const url = new URL(window.location.href);
+                    url.searchParams.delete('element');
+                    url.searchParams.delete('format');
+                    window.history.replaceState({}, '', url.toString());
+                    setIsViewOnly(false);
+                    setSpecimenNotFound(false);
+                    setActiveElement(null);
+                    setCurrentStep(1);
+                  }}
+                  className="min-h-[44px] px-5 bg-cyan-700 hover:bg-cyan-800 text-white rounded font-mono text-xs font-bold transition-colors cursor-pointer"
+                >
+                  Enter Synthesis Chamber
+                </button>
+              </div>
+            ) : (
+              <>
+                {/* Specimen Card Display */}
+                <div className="flex justify-center overflow-x-auto py-2">
+                  <div ref={cardContainerRef} className="shrink-0 flex justify-center">
+                    <ElementCard
+                      element={activeElement}
+                      formFactor={formFactor}
+                      detailLevel={detailLevel}
+                      roomCode={currentRoomCode}
+                    />
+                  </div>
+                </div>
 
-            <ControlPanel
-              currentShader={activeElement.shaderMode}
-              onSelectShader={handleSelectShader}
-              formFactor={formFactor}
-              onChangeFormFactor={setFormFactor}
-              detailLevel={detailLevel}
-              onChangeDetailLevel={setDetailLevel}
-              rarity={activeElement.rarity}
-              hasRerolled={activeElement.hasRerolled}
-              onRerollIsotope={handleRerollIsotope}
-              onOpenFramingModal={() => setIsFramingModalOpen(true)}
-              onDownloadPng={handleDownloadPng}
-              onPrintA4={handlePrintA4}
-              onSaveToWall={handleSaveToWall}
-              isSavedToWall={isSavedToWall}
-              onNewSynthesis={() => {
-                setActiveElement(null);
-                setCurrentStep(1);
-              }}
-              isProcessingShader={isProcessingShader}
-            />
-
-            {/* Photo Framing Adjustment Modal */}
-            {isFramingModalOpen && (
-              <PhotoFramingModal
-                originalPhotoDataUrl={activeElement.rawPhotoDataUrl}
-                initialZoom={activeElement.photoFraming?.zoom || 1}
-                initialPan={{
-                  x: activeElement.photoFraming?.panX || 0,
-                  y: activeElement.photoFraming?.panY || 0,
-                }}
-                onApplyFraming={handleApplyFraming}
-                onClose={() => setIsFramingModalOpen(false)}
-              />
+                {/* Minimal View-Only Specimen Bar */}
+                <SpecimenViewBar
+                  formFactor={formFactor}
+                  onChangeFormFactor={setFormFactor}
+                  onDownloadPng={handleDownloadPng}
+                  atomicNumber={activeElement.atomicNumber}
+                  symbol={activeElement.symbol}
+                />
+              </>
             )}
           </div>
-        )}
+        ) : (
+          <>
+            {/* Step 1: Intake Chamber */}
+            {currentStep === 1 && (
+              <IntakeChamber onBeginSynthesis={handleBeginSynthesis} />
+            )}
 
-        {/* Step 4: Classroom Periodic Table Wall & Batch A4 Print */}
-        {currentStep === 4 && (
-          <ClassroomWall
-            roster={roster}
-            currentRoomCode={currentRoomCode}
-            onJoinRoom={handleJoinRoom}
-            onLeaveRoom={handleLeaveRoom}
-            isSyncing={isSyncing}
-            onRefreshWall={handleRefreshWall}
-            myCardIds={myCardIds}
-            onSelectStudent={(selected) => {
-              setActiveElement(selected);
-              setCurrentStep(3);
-            }}
-            onDeleteStudent={(id) => {
-              updateRoster(roster.filter((item) => item.id !== id));
-              if (currentRoomCode) {
-                deleteElementFromRoom(currentRoomCode, id);
-              }
-            }}
-            onClearRoster={() => {
-              updateRoster([]);
-            }}
-            onImportRoster={(imported) => {
-              updateRoster(imported);
-            }}
-            onNewSynthesis={() => {
-              setActiveElement(null);
-              setCurrentStep(1);
-            }}
-          />
+            {/* Step 2: Particle Accelerator Collision Sequence */}
+            {currentStep === 2 && (
+              <SynthesisLoader
+                studentName={candidateName}
+                photoDataUrl={candidatePhoto}
+                rarity={pendingRarity}
+                onComplete={handleColliderComplete}
+              />
+            )}
+
+            {/* Step 3: Dossier & Trading Card Studio */}
+            {currentStep === 3 && activeElement && (
+              <div className="max-w-6xl mx-auto px-4 py-8">
+                <div className="flex justify-center overflow-x-auto py-2">
+                  <div ref={cardContainerRef} className="shrink-0 flex justify-center">
+                    <ElementCard
+                      element={activeElement}
+                      formFactor={formFactor}
+                      detailLevel={detailLevel}
+                      roomCode={currentRoomCode}
+                    />
+                  </div>
+                </div>
+
+                <ControlPanel
+                  currentShader={activeElement.shaderMode}
+                  onSelectShader={handleSelectShader}
+                  formFactor={formFactor}
+                  onChangeFormFactor={setFormFactor}
+                  detailLevel={detailLevel}
+                  onChangeDetailLevel={setDetailLevel}
+                  rarity={activeElement.rarity}
+                  hasRerolled={activeElement.hasRerolled}
+                  onRerollIsotope={handleRerollIsotope}
+                  onOpenFramingModal={() => setIsFramingModalOpen(true)}
+                  onDownloadPng={handleDownloadPng}
+                  onPrintA4={handlePrintA4}
+                  onSaveToWall={handleSaveToWall}
+                  isSavedToWall={isSavedToWall}
+                  onNewSynthesis={() => {
+                    setActiveElement(null);
+                    setCurrentStep(1);
+                  }}
+                  isProcessingShader={isProcessingShader}
+                />
+
+                {/* Photo Framing Adjustment Modal */}
+                {isFramingModalOpen && (
+                  <PhotoFramingModal
+                    originalPhotoDataUrl={activeElement.rawPhotoDataUrl}
+                    initialZoom={activeElement.photoFraming?.zoom || 1}
+                    initialPan={{
+                      x: activeElement.photoFraming?.panX || 0,
+                      y: activeElement.photoFraming?.panY || 0,
+                    }}
+                    onApplyFraming={handleApplyFraming}
+                    onClose={() => setIsFramingModalOpen(false)}
+                  />
+                )}
+              </div>
+            )}
+
+            {/* Step 4: Classroom Periodic Table Wall & Batch A4 Print */}
+            {currentStep === 4 && (
+              <ClassroomWall
+                roster={roster}
+                currentRoomCode={currentRoomCode}
+                onJoinRoom={handleJoinRoom}
+                onLeaveRoom={handleLeaveRoom}
+                isSyncing={isSyncing}
+                onRefreshWall={handleRefreshWall}
+                myCardIds={myCardIds}
+                onSelectStudent={(selected) => {
+                  setActiveElement(selected);
+                  setCurrentStep(3);
+                }}
+                onDeleteStudent={(id) => {
+                  updateRoster(roster.filter((item) => item.id !== id));
+                  if (currentRoomCode) {
+                    deleteElementFromRoom(currentRoomCode, id);
+                  }
+                }}
+                onClearRoster={() => {
+                  updateRoster([]);
+                }}
+                onImportRoster={(imported) => {
+                  updateRoster(imported);
+                }}
+                onNewSynthesis={() => {
+                  setActiveElement(null);
+                  setCurrentStep(1);
+                }}
+              />
+            )}
+          </>
         )}
       </main>
 

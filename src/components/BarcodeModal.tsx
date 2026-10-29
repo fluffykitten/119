@@ -7,10 +7,11 @@ import { soundEffects } from '../utils/audioSynthesizer';
 interface BarcodeModalProps {
   element: StudentElement;
   roomCode?: string;
+  formFactor?: 'card' | 'dossier';
   onClose: () => void;
 }
 
-export const BarcodeModal: React.FC<BarcodeModalProps> = ({ element, roomCode, onClose }) => {
+export const BarcodeModal: React.FC<BarcodeModalProps> = ({ element, roomCode, formFactor, onClose }) => {
   const [qrDataUrl, setQrDataUrl] = useState<string>('');
   const [copied, setCopied] = useState(false);
 
@@ -18,7 +19,8 @@ export const BarcodeModal: React.FC<BarcodeModalProps> = ({ element, roomCode, o
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
   const pathname = typeof window !== 'undefined' ? window.location.pathname : '';
   const roomQuery = roomCode ? `&room=${encodeURIComponent(roomCode)}` : '';
-  const shareUrl = `${origin}${pathname}?element=${encodeURIComponent(element.id)}${roomQuery}`;
+  const formatQuery = formFactor ? `&format=${encodeURIComponent(formFactor)}` : '';
+  const shareUrl = `${origin}${pathname}?element=${encodeURIComponent(element.id)}${roomQuery}${formatQuery}`;
 
   const serialCode = `IUPAC-Z${element.atomicNumber}-${element.symbol}-${element.id.slice(0, 6).toUpperCase()}`;
 

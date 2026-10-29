@@ -370,6 +370,7 @@ export const ElementCard: React.FC<ElementCardProps> = ({
           <BarcodeModal
             element={element}
             roomCode={roomCode}
+            formFactor={formFactor}
             onClose={() => setIsBarcodeModalOpen(false)}
           />
         )}
@@ -656,6 +657,7 @@ export const ElementCard: React.FC<ElementCardProps> = ({
         <BarcodeModal
           element={element}
           roomCode={roomCode}
+          formFactor={formFactor}
           onClose={() => setIsBarcodeModalOpen(false)}
         />
       )}
