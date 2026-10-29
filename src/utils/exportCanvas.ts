@@ -52,6 +52,41 @@ export async function downloadCardAsPng(
 }
 
 /**
+ * Downloads a 4-up batch A4 cutting sheet as a crisp high-resolution printable PNG.
+ */
+export async function downloadSheetAsPng(
+  sheetNode: HTMLElement,
+  sheetIndex: number,
+  roomCode?: string
+): Promise<void> {
+  try {
+    const dataUrl = await toPng(sheetNode, {
+      pixelRatio: 2.5,
+      backgroundColor: '#ffffff',
+      cacheBust: true,
+      skipFonts: true,
+      filter: (domNode: HTMLElement) => {
+        if (domNode.classList && domNode.classList.contains('no-print')) {
+          return false;
+        }
+        return true;
+      },
+    });
+
+    const roomTag = roomCode ? `_${roomCode}` : '';
+    const link = document.createElement('a');
+    link.download = `Element119_Classroom_4Up_Sheet_${sheetIndex + 1}${roomTag}.png`;
+    link.href = dataUrl;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  } catch (error) {
+    console.error('Failed to export batch sheet to PNG:', error);
+    throw error;
+  }
+}
+
+/**
  * Initiates the browser print dialog with customized document title for clean print output.
  */
 export function triggerPrintDialog(title: string = 'Element 119+ IUPAC Dossier'): void {

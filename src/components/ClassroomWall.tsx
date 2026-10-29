@@ -19,7 +19,7 @@ import {
   Search,
   LogOut,
 } from 'lucide-react';
-import { triggerPrintDialog, downloadCardAsPng } from '../utils/exportCanvas';
+import { triggerPrintDialog, downloadCardAsPng, downloadSheetAsPng } from '../utils/exportCanvas';
 import { soundEffects } from '../utils/audioSynthesizer';
 
 function getRosterFilename(roomCode?: string): string {
@@ -68,6 +68,7 @@ export const ClassroomWall: React.FC<ClassroomWallProps> = ({
 
   const modalCardRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const sheetRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   // Sort students chronologically by Atomic Number Z ascending
   const sortedRoster = [...roster].sort((a, b) => a.atomicNumber - b.atomicNumber);
@@ -151,6 +152,14 @@ export const ClassroomWall: React.FC<ClassroomWallProps> = ({
   // Trigger browser print for batch 4-up mode
   const handleTriggerBatchPrint = () => {
     triggerPrintDialog('Classroom Periodic Table (4 Cards Per Page)');
+  };
+
+  // Download single 4-up cutting sheet as PNG
+  const handleDownloadSheet = async (pageIdx: number) => {
+    const sheetNode = sheetRefs.current[pageIdx];
+    if (!sheetNode) return;
+    soundEffects.playTabbyPurr();
+    await downloadSheetAsPng(sheetNode, pageIdx, currentRoomCode);
   };
 
   return (
@@ -270,11 +279,6 @@ export const ClassroomWall: React.FC<ClassroomWallProps> = ({
       ) : (
         <div className="no-print mb-6 p-3 sm:px-4 sm:py-3 bg-slate-900/95 border border-cyan-500/30 rounded-xl shadow-xl flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
           <div className="flex flex-wrap items-center gap-2.5">
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-950/80 border border-emerald-500/40 text-[10px] text-emerald-300 font-bold uppercase tracking-wider shadow-sm">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>LIVE WALL</span>
-            </div>
-
             <span className="text-slate-300 text-xs font-medium">
               Classroom:
             </span>
@@ -562,21 +566,45 @@ export const ClassroomWall: React.FC<ClassroomWallProps> = ({
           {printPages.map((pageGroup, pageIdx) => (
             <div
               key={pageIdx}
-              className="print-page-break mb-8 bg-white p-4 border border-slate-200 rounded print:border-none print:p-0"
+              ref={(el) => {
+                sheetRefs.current[pageIdx] = el;
+              }}
+              className={`mb-8 max-w-[794px] mx-auto bg-white p-4 sm:p-6 border border-slate-300 rounded-lg shadow-md print:shadow-none print:border-none print:p-0 print:m-0 print:max-w-none ${
+                pageIdx < printPages.length - 1 ? 'print-page-break' : ''
+              }`}
             >
               {/* Print Header */}
-              <div className="flex justify-between items-center text-[10px] font-mono text-slate-600 border-b border-slate-300 pb-1 mb-4">
-                <span>IUPAC CLASSROOM PERIODIC ROSTER &bull; {currentRoomCode ? `ROOM-${currentRoomCode} &bull; ` : ''}SHEET {pageIdx + 1} OF {printPages.length}</span>
-                <span>4 CARDS PER A4 SHEET &bull; CUT ALONG DASHED GUIDES</span>
+              <div className="flex flex-wrap justify-between items-center text-[10px] font-mono text-slate-600 border-b border-slate-300 pb-2 mb-4 gap-2">
+                <span>
+                  IUPAC CLASSROOM PERIODIC ROSTER &bull; {currentRoomCode ? `ROOM-${currentRoomCode} &bull; ` : ''}SHEET {pageIdx + 1} OF {printPages.length}
+                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleDownloadSheet(pageIdx)}
+                    className="no-print min-h-[26px] px-2.5 py-1 rounded bg-cyan-700 hover:bg-cyan-800 text-white font-mono text-[10px] font-bold flex items-center gap-1 transition-colors cursor-pointer shadow-2xs"
+                    title="Download this 4-card sheet as a printable 300 DPI PNG"
+                  >
+                    <Download className="w-3 h-3" />
+                    <span>Save Sheet {pageIdx + 1} PNG</span>
+                  </button>
+                  <span className="hidden sm:inline">4 CARDS PER A4 SHEET &bull; CUT ALONG DASHED GUIDES</span>
+                </div>
               </div>
 
               {/* 2x2 Grid of Cards on A4 Paper with Scissor Cut Guides */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 print:grid-cols-2">
                 {pageGroup.map((item) => (
                   <div
                     key={item.id}
-                    className="relative border border-dashed border-slate-400 p-2 rounded-xs"
+                    className="relative border-2 border-dashed border-slate-400 p-2 rounded-xs flex justify-center items-center bg-slate-50/50 print:bg-transparent"
                   >
+                    {/* Corner Scissor Guide Marker */}
+                    <div className="absolute -top-2.5 left-2 bg-white px-1 text-[9px] font-mono text-slate-500 flex items-center gap-1 print:text-black">
+                      <Scissors className="w-2.5 h-2.5" />
+                      <span>CUT</span>
+                    </div>
+
                     <ElementCard
                       element={item}
                       formFactor="card"

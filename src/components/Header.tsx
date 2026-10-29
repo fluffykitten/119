@@ -33,9 +33,6 @@ export const Header: React.FC<HeaderProps> = ({
               <span className="font-bold text-base tracking-tight text-slate-900">
                 ELEMENT 119+
               </span>
-              <span className="text-[10px] uppercase font-mono tracking-wider px-1.5 py-0.5 rounded bg-slate-200 text-slate-700 font-semibold border border-slate-300">
-                IUPAC Terminal
-              </span>
             </div>
             <p className="text-xs text-slate-600 font-mono tracking-tight hidden sm:block">
               Superheavy Student Synthesis Dossier &bull; Period 8
