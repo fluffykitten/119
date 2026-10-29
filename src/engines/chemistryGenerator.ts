@@ -149,15 +149,18 @@ export function generateStudentElement(
   birthMonth?: number
 ): StudentElement {
   const nameTrimmed = studentName.trim() || 'Curie';
-  const seed = optionalSeed !== undefined ? optionalSeed : hashString(nameTrimmed);
+  const baseHash = Math.abs(hashString(nameTrimmed));
+  const quantumEntropy = Math.floor(Math.random() * 0x7fffffff);
+  const seed = optionalSeed !== undefined ? optionalSeed : (baseHash ^ quantumEntropy);
   const positiveSeed = Math.abs(seed);
-  const effectiveMonth = birthMonth !== undefined && birthMonth >= 1 && birthMonth <= 12
-    ? Math.floor(birthMonth)
-    : (positiveSeed % 12) + 1;
-  const zodiacArchetype = getZodiacArchetype(effectiveMonth);
 
   // Atomic Number Z: 119 to 150
   const atomicNumber = 119 + (positiveSeed % 32);
+  const effectiveMonth = birthMonth !== undefined && birthMonth >= 1 && birthMonth <= 12
+    ? Math.floor(birthMonth)
+    : ((positiveSeed >>> 4) % 12) + 1;
+  const zodiacSeed = Math.abs((positiveSeed ^ (atomicNumber * 1640531527)) + (optionalSeed === undefined ? Math.floor(Math.random() * 1000) : 0));
+  const zodiacArchetype = getZodiacArchetype(effectiveMonth, zodiacSeed);
   const iupacName = getIupacSystematicName(atomicNumber);
   const elementName = deriveStudentElementName(nameTrimmed);
   const symbol = deriveElementSymbol(nameTrimmed, atomicNumber);
@@ -229,8 +232,9 @@ export function generateStudentElement(
 
   // Mix seed with atomic number and mass so different elements and isotope rerolls yield fresh observations
   const flavorSeed = Math.abs((positiveSeed ^ (atomicNumber * 2654435761)) + (atomicMass * 31));
+  const behaviorSeed = Math.abs((positiveSeed ^ (atomicNumber * 2246822519)) + (atomicMass * 17));
   const flavorNote = getCurriculumFlavorText(flavorSeed, nameTrimmed);
-  const chemicalBehavior = getChemicalBehavior(block, positiveSeed);
+  const chemicalBehavior = getChemicalBehavior(block, behaviorSeed);
   const rarity = rollCardRarity(positiveSeed, atomicNumber);
 
   return {
