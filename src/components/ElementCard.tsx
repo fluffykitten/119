@@ -147,6 +147,9 @@ export const ElementCard: React.FC<ElementCardProps> = ({
       <div
         ref={innerRef}
         onMouseMove={handleMouseMove}
+        style={{
+          backgroundColor: isLegendary ? '#020617' : isRare ? '#fffbeb' : '#f8fafc',
+        }}
         className={`w-[360px] max-w-full rounded-sm p-4 relative font-sans select-none print-card-container transition-shadow ${
           isLegendary
             ? 'bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 text-slate-100 border-2 border-cyan-400 shadow-[0_0_25px_rgba(56,189,248,0.35)]'
@@ -366,7 +369,7 @@ export const ElementCard: React.FC<ElementCardProps> = ({
 
         {/* Technical Footer Strip */}
         <div className={`pt-2 flex items-center justify-between border-t relative z-10 ${isLegendary ? 'border-cyan-500/30' : isRare ? 'border-amber-300' : 'border-slate-300'}`}>
-          <TabbyCatBadge variant="card" />
+          <TabbyCatBadge variant="card" className={isLegendary ? '!text-slate-400' : isRare ? '!text-amber-800' : ''} />
           <BarcodeStrip
             code={specimenCode}
             color={isLegendary ? 'text-cyan-300' : isRare ? 'text-amber-800' : 'text-slate-900'}
@@ -391,6 +394,9 @@ export const ElementCard: React.FC<ElementCardProps> = ({
   return (
     <div
       ref={innerRef}
+      style={{
+        backgroundColor: isLegendary ? '#020617' : isRare ? '#fefce8' : '#f8fafc',
+      }}
       className={`w-[740px] max-w-full p-6 sm:p-10 relative font-sans shadow-md print:shadow-none print:border-none print-card-container print:p-0 border ${
         isLegendary
           ? 'bg-slate-950 text-slate-100 border-cyan-500/70 shadow-[0_0_20px_rgba(6,182,212,0.2)]'
@@ -653,7 +659,7 @@ export const ElementCard: React.FC<ElementCardProps> = ({
 
       {/* Dossier Footer with Barcode and Attribution */}
       <div className={`pt-4 flex flex-col sm:flex-row items-center justify-between gap-3 border-t-2 ${isLegendary ? 'border-cyan-400' : isRare ? 'border-amber-600' : 'border-slate-900'}`}>
-        <TabbyCatBadge variant="card" />
+        <TabbyCatBadge variant="card" className={isLegendary ? '!text-slate-400' : isRare ? '!text-amber-800' : ''} />
         <BarcodeStrip
           code={`IUPAC-${specimenCode}`}
           color={isLegendary ? 'text-cyan-300' : isRare ? 'text-amber-800' : 'text-slate-900'}

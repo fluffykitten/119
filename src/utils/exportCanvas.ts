@@ -11,6 +11,16 @@ export async function downloadCardAsPng(
   formFactor: 'card' | 'dossier'
 ): Promise<void> {
   try {
+    const isLegendary = element.rarity === 'legendary';
+    const isRare = element.rarity === 'rare';
+
+    // Rarity-aware background color so dark sci-fi tiers never inherit default white canvas
+    const exportBgColor = isLegendary
+      ? '#020617'
+      : isRare
+      ? (formFactor === 'card' ? '#fffbeb' : '#fefce8')
+      : '#ffffff';
+
     // Canonical render dimensions to prevent squishing when downloading on mobile viewports or constrained modals
     const canonicalWidth = formFactor === 'card' ? 360 : 740;
     const currentWidth = node.offsetWidth || canonicalWidth;
@@ -18,11 +28,12 @@ export async function downloadCardAsPng(
 
     const dataUrl = await toPng(node, {
       pixelRatio: 2.5, // Crisp 300 DPI print quality without memory bloat
-      backgroundColor: '#f8fafc',
+      backgroundColor: exportBgColor,
       width: exportWidth,
       style: {
         width: `${exportWidth}px`,
         maxWidth: `${exportWidth}px`,
+        backgroundColor: exportBgColor,
         margin: '0',
         marginLeft: '0',
         marginRight: '0',
