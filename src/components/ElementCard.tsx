@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import QRCode from 'qrcode';
 import type { StudentElement, FormFactor, DetailLevel } from '../types/element';
 import { TabbyCatBadge } from './TabbyCatBadge';
 import { BarcodeModal } from './BarcodeModal';
@@ -106,11 +107,36 @@ export const ElementCard: React.FC<ElementCardProps> = ({
   innerRef,
 }) => {
   const [isBarcodeModalOpen, setIsBarcodeModalOpen] = useState(false);
+  const [cardQrDataUrl, setCardQrDataUrl] = useState<string>('');
   const isCard = formFactor === 'card';
   const isAcademic = detailLevel === 'academic';
   const rarity = element.rarity || 'common';
   const isRare = rarity === 'rare';
   const isLegendary = rarity === 'legendary';
+
+  // Generate scannable QR code directly onto card/dossier for physical/downloaded scans
+  useEffect(() => {
+    const origin =
+      typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'
+        ? window.location.origin
+        : 'https://119.dfw.my.id';
+    const pathname = typeof window !== 'undefined' ? window.location.pathname : '/';
+    const roomQuery = roomCode ? `&room=${encodeURIComponent(roomCode)}` : '';
+    const formatQuery = formFactor ? `&format=${encodeURIComponent(formFactor)}` : '';
+    const shareUrl = `${origin}${pathname}?element=${encodeURIComponent(element.id)}${roomQuery}${formatQuery}`;
+
+    QRCode.toDataURL(shareUrl, {
+      width: 140,
+      margin: 1,
+      color: {
+        dark: '#0f172a',
+        light: '#ffffff',
+      },
+      errorCorrectionLevel: 'M',
+    })
+      .then((url) => setCardQrDataUrl(url))
+      .catch((err) => console.warn('Could not generate card QR:', err));
+  }, [element.id, roomCode, formFactor]);
 
   // Melting and boiling points with safe fallbacks
   const meltingCelsius = element.meltingPointCelsius ?? 64;
@@ -355,14 +381,36 @@ export const ElementCard: React.FC<ElementCardProps> = ({
           </p>
         </div>
 
-        {/* Technical Footer Strip */}
+        {/* Technical Footer Strip with Scannable Specimen QR */}
         <div className={`pt-2 flex items-center justify-between border-t relative z-10 ${isLegendary ? 'border-cyan-500/30' : isRare ? 'border-amber-300' : 'border-slate-300'}`}>
           <TabbyCatBadge variant="card" />
-          <BarcodeStrip
-            code={`Z${element.atomicNumber}-${element.symbol}-${rarity.toUpperCase().slice(0, 3)}`}
-            color={isLegendary ? 'text-cyan-300' : isRare ? 'text-amber-800' : 'text-slate-900'}
+          <button
+            type="button"
             onClick={() => setIsBarcodeModalOpen(true)}
-          />
+            className="flex items-center gap-1.5 cursor-pointer group hover:opacity-90 transition-opacity focus:outline-none"
+            title="Scan directly with phone camera, or click to copy link"
+          >
+            <div className="text-right font-mono leading-none">
+              <span className={`block text-[8px] font-bold tracking-wider ${isLegendary ? 'text-cyan-300' : isRare ? 'text-amber-800' : 'text-slate-700'}`}>
+                VERIFY
+              </span>
+              <span className="text-[7px] tracking-tight opacity-60">
+                Z{element.atomicNumber}-{element.symbol}
+              </span>
+            </div>
+            {cardQrDataUrl ? (
+              <img
+                src={cardQrDataUrl}
+                alt="Specimen QR Code"
+                className="w-8 h-8 rounded-xs border border-slate-300 bg-white p-0.5 shadow-2xs group-hover:scale-105 transition-transform"
+              />
+            ) : (
+              <BarcodeStrip
+                code={`Z${element.atomicNumber}-${element.symbol}-${rarity.toUpperCase().slice(0, 3)}`}
+                color={isLegendary ? 'text-cyan-300' : isRare ? 'text-amber-800' : 'text-slate-900'}
+              />
+            )}
+          </button>
         </div>
 
         {/* Interactive Barcode QR Modal */}
@@ -642,14 +690,36 @@ export const ElementCard: React.FC<ElementCardProps> = ({
         </div>
       </div>
 
-      {/* Dossier Footer with Barcode and Attribution */}
+      {/* Dossier Footer with Scannable Specimen QR and Attribution */}
       <div className={`pt-4 flex flex-col sm:flex-row items-center justify-between gap-3 border-t-2 ${isLegendary ? 'border-cyan-400' : isRare ? 'border-amber-600' : 'border-slate-900'}`}>
         <TabbyCatBadge variant="card" />
-        <BarcodeStrip
-          code={`IUPAC-${element.atomicNumber}-${element.symbol}-${element.id.slice(0, 6)}`}
-          color={isLegendary ? 'text-cyan-300' : isRare ? 'text-amber-800' : 'text-slate-900'}
+        <button
+          type="button"
           onClick={() => setIsBarcodeModalOpen(true)}
-        />
+          className="flex items-center gap-3 cursor-pointer group hover:opacity-90 transition-opacity focus:outline-none text-right"
+          title="Scan directly with phone camera, or click to copy link"
+        >
+          <div className="font-mono text-[10px] leading-tight">
+            <span className="block font-bold tracking-wider text-slate-800 uppercase">
+              Official Specimen Verification
+            </span>
+            <span className="text-[9px] text-slate-500">
+              IUPAC-Z{element.atomicNumber}-{element.symbol}-{element.id.slice(0, 6).toUpperCase()}
+            </span>
+          </div>
+          {cardQrDataUrl ? (
+            <img
+              src={cardQrDataUrl}
+              alt="Official Specimen Verification QR"
+              className="w-12 h-12 rounded border border-slate-400 bg-white p-0.5 shadow-xs group-hover:scale-105 transition-transform"
+            />
+          ) : (
+            <BarcodeStrip
+              code={`IUPAC-${element.atomicNumber}-${element.symbol}-${element.id.slice(0, 6)}`}
+              color={isLegendary ? 'text-cyan-300' : isRare ? 'text-amber-800' : 'text-slate-900'}
+            />
+          )}
+        </button>
       </div>
 
       {/* Interactive Barcode QR Modal */}

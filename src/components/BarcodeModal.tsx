@@ -15,9 +15,12 @@ export const BarcodeModal: React.FC<BarcodeModalProps> = ({ element, roomCode, f
   const [qrDataUrl, setQrDataUrl] = useState<string>('');
   const [copied, setCopied] = useState(false);
 
-  // Construct official direct link
-  const origin = typeof window !== 'undefined' ? window.location.origin : '';
-  const pathname = typeof window !== 'undefined' ? window.location.pathname : '';
+  // Construct official direct link (pointing to production domain if on local dev)
+  const origin =
+    typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'
+      ? window.location.origin
+      : 'https://119.dfw.my.id';
+  const pathname = typeof window !== 'undefined' ? window.location.pathname : '/';
   const roomQuery = roomCode ? `&room=${encodeURIComponent(roomCode)}` : '';
   const formatQuery = formFactor ? `&format=${encodeURIComponent(formFactor)}` : '';
   const shareUrl = `${origin}${pathname}?element=${encodeURIComponent(element.id)}${roomQuery}${formatQuery}`;
