@@ -5,3 +5,7 @@ compatibility_date = "2024-09-23"
 [assets]
 directory = "./dist"
 binding = "ASSETS"
+
+[[kv_namespaces]]
+binding = "WALL_KV"
+id = "4a6748fa255d456a84b4f8d8cb8f23a1"
