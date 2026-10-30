@@ -25,37 +25,87 @@ export const IntakeChamber: React.FC<IntakeChamberProps> = ({ onBeginSynthesis }
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const countdownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Bind active MediaStream to video element once mounted
+  useEffect(() => {
+    if (useWebcam && videoRef.current && streamRef.current) {
+      const video = videoRef.current;
+      video.srcObject = streamRef.current;
+      video.muted = true;
+      video.playsInline = true;
+      video.play().catch((err: unknown) => {
+        console.warn('Webcam playback error:', err);
+      });
+    }
+  }, [useWebcam]);
 
   // Start webcam
   const startCamera = async () => {
     setCameraError(null);
     try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('Webcam API is not supported in this browser context.');
+      }
+
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((t) => t.stop());
+        streamRef.current = null;
       }
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { width: { ideal: 720 }, height: { ideal: 960 }, facingMode: 'user' },
-        audio: false,
-      });
+
+      let stream: MediaStream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { width: { ideal: 720 }, height: { ideal: 960 }, facingMode: 'user' },
+          audio: false,
+        });
+      } catch {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: false,
+        });
+      }
+
       streamRef.current = stream;
+      setUseWebcam(true);
+
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        videoRef.current.play();
+        videoRef.current.muted = true;
+        videoRef.current.playsInline = true;
+        videoRef.current.play().catch((err: unknown) => {
+          console.warn('Webcam playback error:', err);
+        });
       }
-      setUseWebcam(true);
     } catch (err: unknown) {
       console.warn('Camera access denied or unavailable:', err);
-      setCameraError('Camera access unavailable. Please upload a photo.');
+      const isPermissionDenied =
+        err instanceof DOMException &&
+        (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError');
+      setCameraError(
+        isPermissionDenied
+          ? 'Camera permission denied. Please allow camera access in your browser or upload a photo.'
+          : 'Camera access unavailable. Please upload a photo.'
+      );
       setUseWebcam(false);
     }
   };
 
   // Stop webcam
   const stopCamera = () => {
+    if (countdownTimerRef.current) {
+      clearInterval(countdownTimerRef.current);
+      countdownTimerRef.current = null;
+    }
+    setCountdown(null);
+
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
     }
     setUseWebcam(false);
   };
@@ -70,6 +120,10 @@ export const IntakeChamber: React.FC<IntakeChamberProps> = ({ onBeginSynthesis }
   const captureSnapshot = () => {
     if (!videoRef.current) return;
     const video = videoRef.current;
+    if (video.videoWidth === 0 || video.videoHeight === 0) {
+      console.warn('Video frame not ready yet');
+      return;
+    }
     const canvas = document.createElement('canvas');
     canvas.width = video.videoWidth || 640;
     canvas.height = video.videoHeight || 480;
@@ -97,12 +151,14 @@ export const IntakeChamber: React.FC<IntakeChamberProps> = ({ onBeginSynthesis }
       setCountdown((prev) => {
         if (prev === null || prev <= 1) {
           clearInterval(timer);
+          countdownTimerRef.current = null;
           captureSnapshot();
           return null;
         }
         return prev - 1;
       });
     }, 1000);
+    countdownTimerRef.current = timer;
   };
 
   // Handle local file upload
